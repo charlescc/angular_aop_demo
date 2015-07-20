@@ -1,0 +1,132 @@
+<html ng-app='DemoApp'>
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+</head>
+<body ng-controller='myController'>
+  Open console to see the action!
+
+</body>
+<script src="../js/angular.js"></script>
+
+<script src="../js/angular-aop.js"></script>
+<script>
+
+	var DemoApp=angular.module('DemoApp',['AngularAOP']);
+	DemoApp.factory('Logger', function () {
+	    return function (args) {
+	        if (args.exception) {
+	            console.log('%cException: ' + args.exception.message + '. '
+	                + args.method + ' called before proper authorization.',
+	                'color: red; text-weight: bold; font-size: 1.2em;');
+	        }
+	   		var throwData = (args.exception) ? ' and threw: ' + args.exception.message : '';
+	        console.log('Method: ' + args.method + ', Pointcut: ' + args.when + ', with arguments: ' + angular.toJson(args.args) + throwData);
+	    };
+	});
+	DemoApp.factory('User',['$q','$http','$timeout',function ($q,$http,$timeout){
+		var testname='foo';
+		var testpwd='bar';
+
+		return {
+			setUsername:function(name){
+				testname=name;
+			},
+			setPassword:function(pwd){
+				testpwd=pwd;
+			},
+			getUsername: function(){
+
+
+
+					return testname;
+				
+
+			},
+			getPassword:function(){
+	
+				return testpwd;
+			}
+		}
+
+	}]);
+	DemoApp.factory('Authorization', function (User) {	//自定义USER Service
+	    return function () {
+	        if (User.getUsername()!== 'foo' &&
+	            User.getPassword() !== 'bar') {
+	            throw new Error('Not authorized');
+	        }
+	    };
+	});
+	DemoApp.service('ArticlesCollection', function ($q, $timeout, execute, Logger, Authorization) {
+
+	    var sampleArticles = [
+	            { id: 0, title: 'Title 1', content: 'Content 1' },
+	            { id: 1, title: 'Title 2', content: 'Content 2' },
+	            { id: 2, title: 'Title 3', content: 'Content 3' }
+	        ],
+	        privateArticles = [
+	            { id: 3, title: 'Title 4', content: 'Content 4' },
+	            { id: 4, title: 'Title 5', content: 'Content 5' }
+	        ],
+	        api = {
+	            loadArticles: function () {
+	                var deferred = $q.defer();
+	                $timeout(function () {
+	                    deferred.resolve(sampleArticles);
+	                }, 1000);
+	                return deferred.promise;
+	            },
+	            getArticleById: function (id) {
+	                for (var i = 0; i < sampleArticles.length; i += 1) {
+	                    if (sampleArticles[i].id === id)  {
+	                        return sampleArticles[i];
+	                    }
+	                }
+	                return undefined;
+	            },
+	            getPrivateArticles: function () {
+	                return privateArticles;
+	            }
+	        };
+	    return api;
+	});
+	DemoApp.config(function ($provide, executeProvider) {
+		executeProvider.annotate($provide, {
+			ArticlesCollection: [{
+				jointPoint: executeProvider.BEFORE,
+			    advice: 'Authorization',
+			    methodPattern: /getPrivateArticles|getArticleById/,
+			   // argsPattern: [/^[Ii]d$/]
+			},{
+				jointPoint: executeProvider.ON_THROW,
+			    advice: 'Logger',
+			    methodPattern: /getPrivateArticles|getArticleById/,
+			    //argsPattern: [/^[Ii]d$/]
+			}]
+		});
+	});
+	DemoApp.controller('myController',['$scope','$http','User','ArticlesCollection',function($scope,$http,User,ArticlesCollection){
+		ArticlesCollection.loadArticles().then(function(data){
+			$scope.sampleArticle=data;
+			console.log('sample:');
+			console.log($scope.sampleArticle);
+		});
+		$scope.privateArticles=ArticlesCollection.getPrivateArticles();
+		console.log('private:');
+		console.log($scope.privateArticles);
+		
+		User.setUsername('charles');
+		User.setPassword('xxxxx');
+		ArticlesCollection.loadArticles().then(function(data){
+			$scope.sampleArticle=data;
+			console.log('sample:');
+			console.log($scope.sampleArticle);
+		});
+		$scope.privateArticles=ArticlesCollection.getPrivateArticles();
+		console.log('private:');
+		console.log($scope.privateArticles);
+	}]);
+</script>
+
+</html>
