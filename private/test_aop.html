@@ -13,7 +13,7 @@
 <script>
 
 	var DemoApp=angular.module('DemoApp',['AngularAOP']);
-	DemoApp.factory('Logger', function () {
+	DemoApp.factory('Logger', function () {//LOGGER SERVICE
 	    return function (args) {
 	        if (args.exception) {
 	            console.log('%cException: ' + args.exception.message + '. '
@@ -24,7 +24,7 @@
 	        console.log('Method: ' + args.method + ', Pointcut: ' + args.when + ', with arguments: ' + angular.toJson(args.args) + throwData);
 	    };
 	});
-	DemoApp.factory('User',['$q','$http','$timeout',function ($q,$http,$timeout){
+	DemoApp.factory('User',['$q','$http','$timeout',function ($q,$http,$timeout){ //USER SERVICE for AUTHORIZATION SERVICE
 		var testname='foo';
 		var testpwd='bar';
 
@@ -58,7 +58,7 @@
 	        }
 	    };
 	});
-	DemoApp.service('ArticlesCollection', function ($q, $timeout, execute, Logger, Authorization) {
+	DemoApp.service('ArticlesCollection', function ($q, $timeout, execute, Logger, Authorization) {//SERVICE FOR CONTROLLER SCOPE
 
 	    var sampleArticles = [
 	            { id: 0, title: 'Title 1', content: 'Content 1' },
@@ -91,7 +91,7 @@
 	        };
 	    return api;
 	});
-	DemoApp.config(function ($provide, executeProvider) {
+	DemoApp.config(function ($provide, executeProvider) {//AOP config, AUTHORIZATION&LOGGER into ARTICLESCOLLECTION
 		executeProvider.annotate($provide, {
 			ArticlesCollection: [{
 				jointPoint: executeProvider.BEFORE,
@@ -107,23 +107,23 @@
 		});
 	});
 	DemoApp.controller('myController',['$scope','$http','User','ArticlesCollection',function($scope,$http,User,ArticlesCollection){
-		ArticlesCollection.loadArticles().then(function(data){
+		ArticlesCollection.loadArticles().then(function(data){//load sample articles 
 			$scope.sampleArticle=data;
 			console.log('sample:');
 			console.log($scope.sampleArticle);
 		});
-		$scope.privateArticles=ArticlesCollection.getPrivateArticles();
+		$scope.privateArticles=ArticlesCollection.getPrivateArticles();//load private articles with default name&pwd is OK
 		console.log('private:');
 		console.log($scope.privateArticles);
 		
 		User.setUsername('charles');
 		User.setPassword('xxxxx');
-		ArticlesCollection.loadArticles().then(function(data){
+		ArticlesCollection.loadArticles().then(function(data){//load sample articles 
 			$scope.sampleArticle=data;
 			console.log('sample:');
 			console.log($scope.sampleArticle);
 		});
-		$scope.privateArticles=ArticlesCollection.getPrivateArticles();
+		$scope.privateArticles=ArticlesCollection.getPrivateArticles();//load private articles with default name&pwd is ERROR
 		console.log('private:');
 		console.log($scope.privateArticles);
 	}]);
